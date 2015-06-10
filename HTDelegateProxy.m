@@ -27,24 +27,19 @@
     return self;
 }
 
-- (id)init
-{
-    return self;
-}
-
 - (NSMethodSignature *)methodSignatureForSelector:(SEL)selector
 {
     NSMethodSignature *signature;
-    for (NSValue *nonRetainedValue in _delegates)
+    for (id nonRetainedValue in _delegates)
     {
-        id delegate = [nonRetainedValue nonretainedObjectValue];
-        signature = [[delegate class] instanceMethodSignatureForSelector:selector];
+//        id delegate = [nonRetainedValue nonretainedObjectValue];
+        signature = [[nonRetainedValue class] instanceMethodSignatureForSelector:selector];
         if (signature)
         {
             break;
         }
     }
-	return signature;
+    return signature;
 }
 
 - (void)forwardInvocation:(NSInvocation *)invocation
@@ -52,12 +47,12 @@
     NSString *returnType = [NSString stringWithCString:invocation.methodSignature.methodReturnType encoding:NSUTF8StringEncoding];
     BOOL voidReturnType = [returnType isEqualToString:@"v"];
     
-    for (NSValue *nonRetainedValue in _delegates)
+    for (id nonRetainedValue in _delegates)
     {
-        id delegate = [nonRetainedValue nonretainedObjectValue];
-        if ([delegate respondsToSelector:invocation.selector])
+//        id delegate = [nonRetainedValue nonretainedObjectValue];
+        if ([nonRetainedValue respondsToSelector:invocation.selector])
         {
-            [invocation invokeWithTarget:delegate];
+            [invocation invokeWithTarget:nonRetainedValue];
             if (!voidReturnType)
             {
                 return;
@@ -68,12 +63,12 @@
 
 - (BOOL)respondsToSelector:(SEL)aSelector
 {
-    for (NSValue *nonRetainedValue in _delegates)
+    for (id nonRetainedValue in _delegates)
     {
-        id delegate = [nonRetainedValue nonretainedObjectValue];
-        if ([delegate respondsToSelector:aSelector])
+//        id delegate = [nonRetainedValue nonretainedObjectValue];
+        if ([nonRetainedValue respondsToSelector:aSelector])
         {
-            if ([delegate isKindOfClass:[UITextField class]]
+            if ([nonRetainedValue isKindOfClass:[UITextField class]]
                 && [[UITextField class] instancesRespondToSelector:aSelector])
             {
                 continue;
@@ -86,24 +81,14 @@
 
 #pragma mark - Properties
 
-- (NSArray *)delegates
-{
-    NSMutableArray *delegatesBuilder = [NSMutableArray arrayWithCapacity:[_delegates count]];
-    for (NSValue *delegateValue in _delegates)
-    {
-        [delegatesBuilder addObject:[delegateValue nonretainedObjectValue]];
-    }
-    return [NSArray arrayWithArray:delegatesBuilder];
-}
-
 - (void)setDelegates:(NSArray *)delegates
 {
-    NSMutableArray *delegatesUnretainedBuilder = [NSMutableArray arrayWithCapacity:[delegates count]];
+    _delegates = [NSPointerArray pointerArrayWithOptions:NSPointerFunctionsWeakMemory];
+    
     for (id delegate in delegates)
     {
-        [delegatesUnretainedBuilder addObject:[NSValue valueWithNonretainedObject:delegate]];
+        [_delegates addPointer:(void *)delegate];
     }
-    _delegates = [NSArray arrayWithArray:delegatesUnretainedBuilder];
 }
 
 @end
